@@ -29,7 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="participants">
             <h5>Current Participants:</h5>
             <ul>
-              ${details.participants.map(email => `<li>${email}</li>`).join('')}
+              ${details.participants.map(email => `
+                <li>
+                  <span>${email}</span>
+                  <span class="delete-icon" onclick="unregisterParticipant('${name}', '${email}')">✖</span>
+                </li>
+              `).join('')}
             </ul>
           </div>
         `;
@@ -73,8 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = "Successfully signed up for the activity!";
         messageDiv.className = "message success";
         signupForm.reset();
-        // Reload activities to show updated participants
-        fetchActivities();
+        // Reload activities to show updated participants after a short delay
+        setTimeout(() => {
+          fetchActivities();
+        }, 100);
       } else {
         messageDiv.textContent = result.detail || "Error signing up for activity";
         messageDiv.className = "message error";
@@ -93,6 +100,48 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Function to unregister a participant
+  window.unregisterParticipant = async (activityName, email) => {
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/unregister`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email })
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = "Successfully unregistered from the activity!";
+        messageDiv.className = "message success";
+        // Reload activities to show updated participants after a short delay
+        setTimeout(() => {
+          fetchActivities();
+        }, 100);
+      } else {
+        messageDiv.textContent = result.detail || "Error unregistering from activity";
+        messageDiv.className = "message error";
+      }
+
+      messageDiv.classList.remove("hidden");
+
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        messageDiv.classList.add("hidden");
+      }, 5000);
+    } catch (error) {
+      messageDiv.textContent = "Error connecting to server";
+      messageDiv.className = "message error";
+      messageDiv.classList.remove("hidden");
+      console.error("Error unregistering:", error);
+    }
+  };
 
   // Initialize app
   fetchActivities();

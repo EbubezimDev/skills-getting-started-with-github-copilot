@@ -94,6 +94,20 @@ section h3 {
   color: #666;
   font-size: 14px;
   margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-icon {
+  cursor: pointer;
+  color: #c62828;
+  padding: 4px;
+  border-radius: 50%;
+}
+
+.delete-icon:hover {
+  background-color: #ffebee;
 }
 
 .form-group {
