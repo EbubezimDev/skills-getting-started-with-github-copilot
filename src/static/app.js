@@ -10,8 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch("/activities");
       const activities = await response.json();
 
-      // Clear loading message
+      // Clear loading message and dropdown
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -22,9 +23,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
-          <p>${details.description}</p>
+          <p><strong>Description:</strong> ${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Available Spots:</strong> ${spotsLeft} of ${details.max_participants}</p>
+          <div class="participants">
+            <h5>Current Participants:</h5>
+            <ul>
+              ${details.participants.map(email => `
+                <li>
+                  <span>${email}</span>
+                  <span class="delete-icon" onclick="unregisterParticipant('${name}', '${email}')">✖</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -50,21 +62,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/signup`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email })
         }
       );
 
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        messageDiv.textContent = "Successfully signed up for the activity!";
+        messageDiv.className = "message success";
         signupForm.reset();
+        // Reload activities to show updated participants after a short delay
+        setTimeout(() => {
+          fetchActivities();
+        }, 100);
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.textContent = result.detail || "Error signing up for activity";
+        messageDiv.className = "message error";
       }
 
       messageDiv.classList.remove("hidden");
@@ -74,12 +94,54 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.classList.add("hidden");
       }, 5000);
     } catch (error) {
-      messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
+      messageDiv.textContent = "Error connecting to server";
+      messageDiv.className = "message error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
   });
+
+  // Function to unregister a participant
+  window.unregisterParticipant = async (activityName, email) => {
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/unregister`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email })
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = "Successfully unregistered from the activity!";
+        messageDiv.className = "message success";
+        // Reload activities to show updated participants after a short delay
+        setTimeout(() => {
+          fetchActivities();
+        }, 100);
+      } else {
+        messageDiv.textContent = result.detail || "Error unregistering from activity";
+        messageDiv.className = "message error";
+      }
+
+      messageDiv.classList.remove("hidden");
+
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        messageDiv.classList.add("hidden");
+      }, 5000);
+    } catch (error) {
+      messageDiv.textContent = "Error connecting to server";
+      messageDiv.className = "message error";
+      messageDiv.classList.remove("hidden");
+      console.error("Error unregistering:", error);
+    }
+  };
 
   // Initialize app
   fetchActivities();
